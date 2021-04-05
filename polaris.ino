@@ -89,22 +89,17 @@ void loop() {
         case STOP:
             ledStrip.clear();
             ledStrip.show();
-            Serial.println(F("clear"));
             break;
         case FORWARD:
             turnOnPixels(forwardPixels);
-            Serial.println(F("1"));
             break;
         case RIGHT:
             turnOnPixels(rightPixels);
-            Serial.println(F("2"));
             break;
         case LEFT:
             turnOnPixels(leftPixels);
-            Serial.println(F("3"));
             break;
     }
-    delay(10);
 }
 
 enum Buttons {
