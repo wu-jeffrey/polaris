@@ -1,14 +1,12 @@
 #include <Adafruit_NeoPixel.h>
-#include <Vector.h>
-
 #include <Arduino.h>
 #include <SPI.h>
+#include <Vector.h>
+
 #include "Adafruit_BLE.h"
 #include "Adafruit_BluefruitLE_SPI.h"
 #include "Adafruit_BluefruitLE_UART.h"
-
 #include "BluefruitConfig.h"
-
 #include "color.cpp"
 
 #define PIN 6
@@ -22,9 +20,8 @@ enum Directions { LEFT,
                   RIGHT,
                   FORWARD };
 
-
 // Settings that can be changed via BlueTooth ////////////////////////////////////////////
-Color currentColor = rgbColors[WHITE];
+Color currentColor = basicColors[WHITE];
 
 int brightness = 10;
 
@@ -41,7 +38,6 @@ Vector<int> leftPixels;
 void setup() {
     ledStrip.begin();
     Serial.begin(115200);
-    ledStrip.setBrightness(brightness);
 
     forwardPixels.setStorage(_forwardPixels);
     forwardPixels.push_back(11);
@@ -59,16 +55,14 @@ void setup() {
     /* Initialise the module */
     Serial.print(F("Initialising the Bluefruit LE module: "));
 
-    if ( !ble.begin(VERBOSE_MODE) )
-    {
+    if (!ble.begin(VERBOSE_MODE)) {
         error(F("Couldn't find Bluefruit, make sure it's in CoMmanD mode & check wiring?"));
     }
-    Serial.println( F("OK!") );
+    Serial.println(F("OK!"));
 
     /* Disable command echo from Bluefruit */
     ble.echo(false);
 
-    
     Serial.println("Requesting Bluefruit info:");
     /* Print Bluefruit information */
     ble.info();
@@ -80,14 +74,15 @@ void setup() {
     ble.verbose(false);  // debug info is a little annoying after this point!
 
     /* Wait for connection */
-    while (! ble.isConnected()) {
+    while (!ble.isConnected()) {
         delay(500);
     }
 }
 
 void loop() {
+    ledStrip.clear();
+    ledStrip.setBrightness(brightness);
     switch (pollInstruction()) {
-        // TODO: Decide what to do with no data
         case FORWARD:
             turnOnPixels(forwardPixels);
             break;
@@ -97,9 +92,19 @@ void loop() {
         case LEFT:
             turnOnPixels(leftPixels);
             break;
+        default:
+            turnOnPixels(forwardPixels);
     }
     delay(10);
 }
+
+enum Buttons {
+    BUTTON_FORWARD = 5,
+    BUTTON_RIGHT = 7,
+    BUTTON_LEFT = 8,
+    BUTTON_BRIGHTNESS_UP = 1,
+    BUTTON_BRIGHTNESS_DOWN = 3,
+};
 
 int pollInstruction() {
     // Check for incoming characters from Bluefruit
@@ -110,19 +115,53 @@ int pollInstruction() {
         return;
     }
     // Some data was found, its in the buffer
-    enum Directions d;
-    switch (ble.buffer) {
-        case "0001": d = FORWARD; break;
-        case "0002": d = RIGHT; break;
-        case "0003": d = LEFT; break;
+    String buffer = String(ble.buffer);
+
+    enum Directions d = FORWARD;
+
+    // D-pad Controller Input
+    if (buffer[1] == 'B') {
+        uint8_t btnNum = buffer[2] - '0';
+        boolean pressed = buffer[3] - '0';
+
+        if (pressed) {
+            switch (int(btnNum)) {
+                case BUTTON_FORWARD:
+                    d = FORWARD;
+                    break;
+                case BUTTON_RIGHT:
+                    d = RIGHT;
+                    break;
+                case BUTTON_LEFT:
+                    d = LEFT;
+                    break;
+                case BUTTON_BRIGHTNESS_UP:
+                    brightnessUp();
+                    break;
+                case BUTTON_BRIGHTNESS_DOWN:
+                    brightnessDown();
+                    break;
+            }
+        }
     }
+
+    // Color
+    if (buffer[1] == 'C') {
+        int red = buffer[2];
+        int green = buffer[3];
+        int blue = buffer[4];
+
+        Color newColor(red, green, blue);
+
+        currentColor = newColor;
+    }
+
     ble.waitForOK();
 
-    return FORWARD;
+    return d;
 }
 
 void turnOnPixels(Vector<int>& pixels) {
-    ledStrip.clear();
     for (Vector<int>::iterator it = pixels.begin(); it != pixels.end(); ++it) {
         turnOnPixel(*it);
     }
@@ -131,4 +170,23 @@ void turnOnPixels(Vector<int>& pixels) {
 
 void turnOnPixel(int pixelId) {
     ledStrip.setPixelColor(pixelId, currentColor.green, currentColor.red, currentColor.blue, currentColor.white);
+}
+
+void brightnessUp() {
+    brightness += 10;
+    if (brightness > 255) {
+        brightness = 255;
+    }
+}
+void brightnessDown() {
+    brightness -= 10;
+    if (brightness < 10) {
+        brightness = 10;
+    }
+}
+
+void error(const __FlashStringHelper* err) {
+    Serial.println(err);
+    while (1)
+        ;
 }
