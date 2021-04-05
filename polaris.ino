@@ -16,9 +16,11 @@
 Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(N_LEDS, PIN, NEO_RGBW + NEO_KHZ800);
 Adafruit_BluefruitLE_SPI ble(BLUEFRUIT_SPI_CS, BLUEFRUIT_SPI_IRQ, BLUEFRUIT_SPI_RST);
 
-enum Directions { LEFT,
-                  RIGHT,
-                  FORWARD };
+enum Directions { STOP = 0,
+                  FORWARD = 1,
+                  LEFT = 2,
+                  RIGHT = 3,
+};
 
 // Settings that can be changed via BlueTooth ////////////////////////////////////////////
 Color currentColor = basicColors[WHITE];
@@ -82,18 +84,25 @@ void setup() {
 void loop() {
     ledStrip.clear();
     ledStrip.setBrightness(brightness);
+
     switch (pollInstruction()) {
+        case STOP:
+            ledStrip.clear();
+            ledStrip.show();
+            Serial.println(F("clear"));
+            break;
         case FORWARD:
             turnOnPixels(forwardPixels);
+            Serial.println(F("1"));
             break;
         case RIGHT:
             turnOnPixels(rightPixels);
+            Serial.println(F("2"));
             break;
         case LEFT:
             turnOnPixels(leftPixels);
+            Serial.println(F("3"));
             break;
-        default:
-            turnOnPixels(forwardPixels);
     }
     delay(10);
 }
@@ -117,7 +126,7 @@ int pollInstruction() {
     // Some data was found, its in the buffer
     String buffer = String(ble.buffer);
 
-    enum Directions d = FORWARD;
+    enum Directions d = STOP;
 
     // D-pad Controller Input
     if (buffer[1] == 'B') {
