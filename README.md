@@ -5,8 +5,8 @@ Created for my MTE 380 Project, the goal of which was to explore a novel way to 
 Watch a video [here](https://youtu.be/3ttGRnKtWzQ)
 
 ## Team
-Ellen Choi
-Stephen He
-Simon Wong
-Rutvik Pandya
-Jeffrey Wu
+- Ellen Choi
+- Stephen He
+- Simon Wong
+- Rutvik Pandya
+- Jeffrey Wu
